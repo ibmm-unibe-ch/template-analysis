@@ -9,15 +9,29 @@ from sklearn.preprocessing import RobustScaler
 
 default_angles = {"1": [60, 14, 42], "2": [83, -100, 17], "3": [66, -14, 132]}
 
+
 def select_residues(atoms, start=None, end=None):
     start = 0 if start is None else start
     end = max(atoms.getResnums()) if end is None else end
     print(start)
     print(end)
-    before = atoms.select(f'resnum < {start}').toAtomGroup() if not atoms.select(f'resnum < {start}') is None else None
-    middle = atoms.select(f'resnum {start}:{end}').toAtomGroup() if not atoms.select(f'resnum {start}:{end}') is None else None
-    after = atoms.select(f'resnum >= {end}').toAtomGroup() if not atoms.select(f'resnum >= {end}') is None else None
+    before = (
+        atoms.select(f"resnum < {start}").toAtomGroup()
+        if not atoms.select(f"resnum < {start}") is None
+        else None
+    )
+    middle = (
+        atoms.select(f"resnum {start}:{end}").toAtomGroup()
+        if not atoms.select(f"resnum {start}:{end}") is None
+        else None
+    )
+    after = (
+        atoms.select(f"resnum >= {end}").toAtomGroup()
+        if not atoms.select(f"resnum >= {end}") is None
+        else None
+    )
     return before, middle, after
+
 
 def put_together(parts):
     atoms = []
@@ -29,6 +43,7 @@ def put_together(parts):
             atoms.append(part.getCoords())
     return np.vstack(atoms)
 
+
 def flatten_atoms(atoms, n_components=2):
     scaler = RobustScaler()
     coords = atoms.getCoords()
@@ -39,9 +54,12 @@ def flatten_atoms(atoms, n_components=2):
     atoms.setCoords(updated_coords)
     return atoms
 
-def flatten_pdb(input_file: str, output_file: str, n_components: int,start=None, end=None):
+
+def flatten_pdb(
+    input_file: str, output_file: str, n_components: int, start=None, end=None
+):
     atoms = parsePDB(input_file)
-    before, middle, after = select_residues(atoms, start,end)
+    before, middle, after = select_residues(atoms, start, end)
     flattened_middle = flatten_atoms(middle, n_components=n_components)
     flattened_atoms = put_together((before, flattened_middle, after))
     atoms.setCoords(flattened_atoms)
@@ -57,11 +75,9 @@ def randomize_atoms(atoms, radius=20):
     return atoms
 
 
-def randomize_pdb(
-    input_file: str, output_file: str, radius=20, start=None, end=None
-):
+def randomize_pdb(input_file: str, output_file: str, radius=20, start=None, end=None):
     atoms = parsePDB(input_file)
-    before, middle, after = select_residues(atoms, start,end)
+    before, middle, after = select_residues(atoms, start, end)
     randomized_middle = randomize_atoms(middle, radius=radius)
     randomized_atoms = put_together((before, randomized_middle, after))
     print(randomized_atoms.shape)

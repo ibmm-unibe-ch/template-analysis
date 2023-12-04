@@ -16,7 +16,9 @@ def read_scores(scores_path: Path) -> dict:
         "lddt": data.get("lddt", None),
     }
     if "dockq_scores" in data:
-        output["dockq_scores"] = data["dockq_scores"][0] if data["dockq_scores"] else None
+        output["dockq_scores"] = (
+            data["dockq_scores"][0] if data["dockq_scores"] else None
+        )
     return output
 
 
@@ -123,7 +125,7 @@ def get_results_folder(folder_path: Path):
         output = output + get_results_identifier_multimer(folder_path, identifier)
     dataframe = pd.DataFrame(output)
     return dataframe
-    #dataframe.to_csv(folder_path / "table_multimer.csv")
+    # dataframe.to_csv(folder_path / "table_multimer.csv")
 
 
 if __name__ == "__main__":

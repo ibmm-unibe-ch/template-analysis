@@ -84,11 +84,16 @@ def get_results_identifier(parent_path: Path, identifier: str) -> dict:
 def get_results_folder(folder_path: Path):
     output = []
     for file in os.listdir(folder_path):
-        if not str(file).endswith(".fasta") or str(file).startswith("T1028") or str(file).startswith("T1026") or str(file).startswith("T1027"):
+        if (
+            not str(file).endswith(".fasta")
+            or str(file).startswith("T1028")
+            or str(file).startswith("T1026")
+            or str(file).startswith("T1027")
+        ):
             continue
         identifier = str(file).split(".")[0]
         if identifier.startswith("T"):
-            identifier="".join(identifier.split("s"))
+            identifier = "".join(identifier.split("s"))
         output = output + get_results_identifier(folder_path, identifier)
     dataframe = pd.DataFrame(output)
     return dataframe

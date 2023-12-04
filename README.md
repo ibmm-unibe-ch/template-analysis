@@ -1,19 +1,25 @@
-# [IBMM Python template](https://github.com/ibmm-unibe-ch/Python-Template)
+# [Aggregating and optimising AlphaFold2 structure predictions with templates](https://github.com/ibmm-unibe-ch/template-analysis)
 
-This is the template you can use to start a new Python project at IBMM.
+In this work-in-progress project we search for the capabilites of [AlphaFold2](https://github.com/deepmind/alphafold) ([localcolabfold](https://github.com/YoshitakaMo/localcolabfold)) on top of the traditional protein folding.
+These experiments also serve as datapoints to find out about the learnt concepts of AlphaFold2, like the suggestion by [Roney & Ovchinnikov](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.129.238101) 
+For this, we focussed on the oftentimes overlooked template input and single sequence input.
 
-Already included are:
+## Experiments
+- Monomer refinement of [CASP14](https://predictioncenter.org/casp14/targetlist.cgi) and [OmegaFold](https://github.com/HeliXonProtein/OmegaFold) hard proteins
+- Multimerisation with [CASP14](https://predictioncenter.org/casp14/targetlist.cgi) oligomers
+- Protein-protein interaction with [DIPS 100](https://github.com/drorlab/DIPS), like [DiffDock-PP](https://github.com/ketatam/DiffDock-PP)
+- Recovery of a backbone diffused with [RFDiffusion](https://github.com/RosettaCommons/RFdiffusion) of [O14933](https://alphafold.ebi.ac.uk/entry/O14933)
+- Side-chain packing with [CASP14](https://predictioncenter.org/casp14/targetlist.cgi), like [Attnpacker](https://github.com/MattMcPartlon/AttnPacker)
+- Template aggregation with a synthetic test case of [O14933](https://alphafold.ebi.ac.uk/entry/O14933)
 
-- Makefile &rightarrow; shortcut to usefull commands like environment generation or formatting
-  - Please extend this file for commands you use a lot, like starting a web server.
-- Requirements files &rightarrow; depending what kind of virtual environment you like, there already is a (basically) empty file
-  - environment.yml &rightarrow; conda
-  - requirements.txt &rightarrow; pip
-- GitHub actions
-  - .github/workflows &rightarrow; automatically run checks on GitHubs servers when pushing
-    - formatting
-    - linting
-- Pull request template
-  - The standard template to fill in while filing a pull request
+## Files
+The repository needs better clean-up. We will improve reproducibility soon.
+- *bash-\** &rightarrow; main script to make experiment
+- *Evaluate_\** &rightarrow; evaluation, where you can also find results
+- *Makefile* &rightarrow; central piece for reproducibility
+- *figures/* &rightarrow; plots of results
+- *tables/* &rightarrow; raw results in table form
+- *visualisations/* &rightarrow; other visualisations
 
-If you run into bugs, have questions or there are things to add, please contact [Jannik](mailto:jannik.gut@unibe.ch).
+## Contact
+If there are questions, please file a [GitHub issue](https://github.com/ibmm-unibe-ch/template-analysis/issues) or send an e-mail to thomas.lemmin@unibe.ch and jannik.gut@unibe.ch.

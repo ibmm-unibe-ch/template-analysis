@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "aggregation_test/up_template_flattened/2upa.pdb",
         2,
         100,
-        None,        
+        None,
     )
     flatten_pdb(
         "aggregation_test/full_template/2ubq.pdb",
