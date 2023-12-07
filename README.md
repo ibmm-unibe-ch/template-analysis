@@ -3,7 +3,11 @@
 In this work-in-progress project we search for the capabilites of [AlphaFold2](https://github.com/deepmind/alphafold) ([localcolabfold](https://github.com/YoshitakaMo/localcolabfold)) on top of the traditional protein folding.
 These experiments also serve as datapoints to find out about the learnt concepts of AlphaFold2, like the suggestion by [Roney & Ovchinnikov](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.129.238101) 
 For this, we focussed on the oftentimes overlooked template input and single sequence input.
-
+## ToDo
+Among other things, these are still things todo:
+- test method with an all gaps input instead of single sequence
+- explore results of the DIPS100 dataset
+- better code quality (reproducibility and readability)
 ## Experiments
 - Monomer refinement of [CASP14](https://predictioncenter.org/casp14/targetlist.cgi) and [OmegaFold](https://github.com/HeliXonProtein/OmegaFold) hard proteins
 - Multimerisation with [CASP14](https://predictioncenter.org/casp14/targetlist.cgi) oligomers
