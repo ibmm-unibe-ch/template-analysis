@@ -2,15 +2,15 @@ align 1pak, 2ubq;
 align 1alf, 2ubq;
 
 show cartoon, 1alf;
-set_color blue, [0.345, 0.419, 0.643];
+set_color blue, [0.9921568627450981, 0.8784313725490196, 0.42745098039215684];
 color blue, 1alf;
 
 show cartoon, 1pak;
-set_color orange, [0.964, 0.556, 0.372];
+set_color orange, [1, 0.6274509803921569, 0.2784313725490196];
 color orange, 1pak;
 
 show cartoon, 2ubq;
-set_color yellow, [0.058823529411764705, 0.8666666666666667, 0.5647058823529412];
+set_color yellow, [0.21568627450980393, 0.9058823529411765, 0.5137254901960784];
 color yellow, 2ubq;
 
 set line_width, 3; # set line width

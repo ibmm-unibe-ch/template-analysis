@@ -1,110 +1,117 @@
 #!/bin/bash
-
+source paths.sh
 SEEDS=1
-MODELS=5
-BESTNAME10="*_unrelaxed_rank_001*seed_[0-9][0-9][0-9][0-9].pdb"
-BESTNAME1="*_unrelaxed_rank_001*seed_[0-9][0-9][0-9][0-9].r1.pdb"
-BESTNAME0="*_unrelaxed_rank_001*seed_[0-9][0-9][0-9][0-9].r0.pdb"
+MODELS=2
+RECYCLES=0
+BESTNAME="*_unrelaxed_rank_001*seed_[0-9][0-9][0-9][0-9].pdb"
 
-for FILE in CASP14/*.pdb;
-do
+
+function del_dir_and_mk() {
+    rm -rf $1
+    mkdir -p $1
+}
+
+function fold_and_score() {
+    colabfold_batch --overwrite-existing-results --random-seed 6217 --num-seeds $SEEDS --num-models $MODELS --templates --custom-template-path $1 --save-recycles --save-all --overwrite-existing-results --num-recycle $RECYCLES --msa-mode single_sequence --num-relax 0 $2 $3
+    BEST=$(find $3 -name $BESTNAME | tail -1)
+    score $4 $BEST $3
+}
+
+function score() {
+    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $2 --reference $1 --output $3/ost_scores.json --lddt --local-lddt --tm-score --rigid-scores --lddt-no-stereochecks
+    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $2 --targetpdb $1 --outputpath $3/attn_scores.json
+    python score.py --parentpath $3 --correctpath $1
+}
+
+function clean_pdb() {
+    pdb_sort $1 | pdb_tidy | pdb_chain -A >temp_packing_13
+    cp temp_packing_13 $1
+    pdbfixer $1 --output=$1 --replace-nonstandard --add-residues
+    $MAXIT_PATH -input $1 -output ${1%???}cif -o 1
+}
+
+for FILE in CASP13/*.pdb; do
     FILENAME=$(basename $FILE .pdb)
+    echo ${FILENAME}
     PARENT_DIR="$(dirname "$FILE")"
-    AF_FULL_FOLDER=${FILE:0:6}_AF_FULL/$FILENAME
-    mkdir -p ${AF_FULL_FOLDER}
-    colabfold_batch --overwrite-existing-results --random-seed 6217 --num-seeds $SEEDS --num-models $MODELS --save-recycles --save-all --overwrite-existing-results --num-recycle 10 --num-relax 0 $PARENT_DIR/$FILENAME.fasta $AF_FULL_FOLDER
-    BEST10=$(find $AF_FULL_FOLDER -name $BESTNAME10|tail -1)
-    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST10 --output $AF_FULL_FOLDER/ost_scores10.json --lddt --local-lddt --tm-score --rigid-scores
-    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST10 --outputpath $AF_FULL_FOLDER/attn_scores10.json
-    # iteration 1
-    BEST0=$(find $AF_FULL_FOLDER -name $BESTNAME0|tail -1)
-    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST0 --output $AF_FULL_FOLDER/ost_scores0.json --lddt --local-lddt --tm-score --rigid-scores
-    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST0 --outputpath $AF_FULL_FOLDER/attn_scores0.json
-    # iteration 0
-    BEST1=$(find $AF_FULL_FOLDER -name $BESTNAME1|tail -1)
-    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST1 --output $AF_FULL_FOLDER/ost_scores1.json --lddt --local-lddt --tm-score --rigid-scores
-    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST1 --outputpath $AF_FULL_FOLDER/attn_scores1.json
-
-    
-    #FASPR_FOLDER=${FILE:0:6}_FASPR/$FILENAME
-    #BACKBONE_FOLDER=${FILE:0:6}_BB/$FILENAME
-    #FASPR_PATH=${FASPR_FOLDER}/1fas.pdb
-    #AF_FOLDER=${FILE:0:6}_AF/$FILENAME
-    #BACKBONE_PATH=${BACKBONE_FOLDER}/1bb1.pdb
-    #BB_AF_FOLDER=${FILE:0:6}_BB_AF/$FILENAME
-    #mkdir -p ${FASPR_FOLDER}
-    #mkdir -p ${AF_FOLDER}
-    #mkdir -p ${BACKBONE_FOLDER}
-    #mkdir -p ${BB_AF_FOLDER}
-    #echo ${FILE}
-    #echo ${FILENAME}
-    #FASPR/FASPR -i $FILE -o $FASPR_PATH
-    #pdb_chain -A $FILE>temp1
-    #cp temp1 $FILE
-    #pdbfixer $FILE --output=$FILE --replace-nonstandard --add-residues 
-    #pdb_chain -A $FASPR_PATH>temp
-    #cp temp $FASPR_PATH
-    #pdbfixer $FASPR_PATH --output=$FASPR_PATH --replace-nonstandard --add-residues
-    #python get_backbone.py --startpdb $FILE --targetpdb $BACKBONE_PATH
-    #podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $FASPR_PATH --output $FASPR_FOLDER/ost_scores.json --lddt --local-lddt --tm-score --rigid-scores
-    #micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $FASPR_PATH --outputpath $FASPR_FOLDER/attn_scores.json
-    ## FASPR AF
-    #colabfold_batch --overwrite-existing-results --random-seed 6217 --num-seeds $SEEDS --num-models $MODELS --templates --custom-template-path $FASPR_FOLDER --save-recycles --save-all --overwrite-existing-results --num-recycle 10 --msa-mode single_sequence --num-relax 0 $PARENT_DIR/$FILENAME.fasta $AF_FOLDER
-    ## iteration 10
-    #BEST10=$(find $AF_FOLDER -name $BESTNAME10|tail -1)
-    #podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST10 --output $AF_FOLDER/ost_scores10.json --lddt --local-lddt --tm-score --rigid-scores
-    #micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST10 --outputpath $AF_FOLDER/attn_scores10.json
-    ## iteration 1
-    #BEST0=$(find $AF_FOLDER -name $BESTNAME0|tail -1)
-    #podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST0 --output $AF_FOLDER/ost_scores0.json --lddt --local-lddt --tm-score --rigid-scores
-    #micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST0 --outputpath $AF_FOLDER/attn_scores0.json
-    ## iteration 0
-    #BEST1=$(find $AF_FOLDER -name $BESTNAME1|tail -1)
-    #podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST1 --output $AF_FOLDER/ost_scores1.json --lddt --local-lddt --tm-score --rigid-scores
-    #micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST1 --outputpath $AF_FOLDER/attn_scores1.json
-
-    #### BB AF --not working
-    ###colabfold_batch --overwrite-existing-results --random-seed 6217 --num-seeds $SEEDS --num-models $MODELS --templates --custom-template-path $BACKBONE_FOLDER --save-recycles --save-all --overwrite-existing-results --num-recycle 10 --msa-mode single_sequence --num-relax 0 $PARENT_DIR/$FILENAME.fasta $BB_AF_PATH
-    #### iteration 10
-    ###BEST10=$(find $BB_AF_PATH -name $BESTNAME10|tail -1)
-    ###podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST10 --output $BB_AF_PATH/ost_scores10.json --lddt --local-lddt --tm-score --rigid-scores
-    ###micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST10 --outputpath $BB_AF_PATH/attn_scores10.json
-    #### iteration 1
-    ###BEST0=$(find $BB_AF_PATH -name $BESTNAME0|tail -1)
-    ###podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST0 --output $BB_AF_PATH/ost_scores0.json --lddt --local-lddt --tm-score --rigid-scores
-    ###micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST0 --outputpath $BB_AF_PATH/attn_scores0.json
-    #### iteration 0
-    ###BEST1=$(find $BB_AF_PATH -name $BESTNAME1|tail -1)
-    ###podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST1 --output $BB_AF_PATH/ost_scores1.json --lddt --local-lddt --tm-score --rigid-scores
-    ###micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST1 --outputpath $BB_AF_PATH/attn_scores1.json
+    PREFIX=${FILE:0:6}
+    MIN_FASTA=$PARENT_DIR/$FILENAME.rec.fasta
+    AF_FULL_FOLDER=${PREFIX}_AF_FULL/$FILENAME
+    TEMPLATE_FOLDER=${PREFIX}_TEMPLATE/$FILENAME
+    AF_TEMPLATE_FOLDER=${PREFIX}_TEMPLATE_AF/$FILENAME
+    FASPR_FOLDER=${PREFIX}_FASPR/$FILENAME
+    FASPR_PATH=${FASPR_FOLDER}/1fas.pdb
+    FASPR_AF_FOLDER=${PREFIX}_FASPR_AF/$FILENAME
+    ATTNPACK_FOLDER=${PREFIX}_ATTNPACK/$FILENAME
+    ATTNPACK_PATH=${ATTNPACK_FOLDER}/1pac.pdb
+    ATTNPACK_AF_FOLDER=${PREFIX}_ATTNPACK_AF/$FILENAME
+    BACKBONE_FOLDER=${PREFIX}_BB/$FILENAME
+    BACKBONE_PATH=${BACKBONE_FOLDER}/1bb1.pdb
+    BACKBONE_CB_FOLDER=${PREFIX}_BB_CB/$FILENAME
+    BACKBONE_CB_PATH=${BACKBONE_CB_FOLDER}/1bbc.pdb
+    CB_DUMMY_FOLDER=${PREFIX}_CB_DUMMY/$FILENAME
+    CB_DUMMY_PATH=${CB_DUMMY_FOLDER}/1cbd.pdb
+    CB_HEURISTIC_FOLDER=${PREFIX}_CB_HEURISTIC/$FILENAME
+    CB_HEURISTIC_PATH=${CB_HEURISTIC_FOLDER}/1cbh.pdb
+    del_dir_and_mk ${AF_FULL_FOLDER}
+    del_dir_and_mk ${TEMPLATE_FOLDER}
+    del_dir_and_mk ${AF_TEMPLATE_FOLDER}
+    del_dir_and_mk ${ATTNPACK_FOLDER}
+    del_dir_and_mk ${ATTNPACK_AF_FOLDER}
+    del_dir_and_mk ${FASPR_AF_FOLDER}
+    del_dir_and_mk ${FASPR_FOLDER}
+    del_dir_and_mk ${BACKBONE_FOLDER}
+    del_dir_and_mk ${BACKBONE_CB_FOLDER}
+    del_dir_and_mk ${CB_DUMMY_FOLDER}
+    del_dir_and_mk ${CB_HEURISTIC_FOLDER}
+    clean_pdb $FILE
+    pdb_tofasta $FILE >$MIN_FASTA
+    # AlphaFold
+    colabfold_batch --overwrite-existing-results --random-seed 6217 --num-seeds $SEEDS --num-models $MODELS --save-recycles --save-all --overwrite-existing-results --num-recycle $RECYCLES --num-relax 0 $MIN_FASTA $AF_FULL_FOLDER
+    BEST=$(find $AF_FULL_FOLDER -name $BESTNAME | tail -1)
+    score $FILE $BEST $AF_FULL_FOLDER
+    # Full template, single sequence
+    cp $FILE $TEMPLATE_FOLDER/1cor.pdb
+    fold_and_score $TEMPLATE_FOLDER $MIN_FASTA $AF_TEMPLATE_FOLDER $FILE
+    # FASPR
+    $FASPR_PATH -i $FILE -o $FASPR_PATH
+    clean_pdb $FASPR_PATH
+    score $FILE $FASPR_PATH $FASPR_FOLDER
+    # FASPR AF
+    fold_and_score $FASPR_FOLDER $MIN_FASTA $FASPR_AF_FOLDER $FILE
+    # BB AF
+    python get_backbone.py --startpdb $FILE --targetpdb $BACKBONE_PATH
+    fold_and_score $BACKBONE_FOLDER $MIN_FASTA $BACKBONE_FOLDER $FILE
+    # Attnpack
+    micromamba run -n attnpacker python attnpack.py --inputpdb $BACKBONE_PATH --outputpath $ATTNPACK_PATH --numcores 8
+    score $FILE $ATTNPACK_PATH $ATTNPACK_FOLDER
+    # Attnpack AF
+    fold_and_score $ATTNPACK_FOLDER $MIN_FASTA $ATTNPACK_AF_FOLDER $FILE
+    # CB backbone
+    python get_backbone_cb.py --startpdb $FILE --targetpdb $BACKBONE_CB_PATH
+    fold_and_score $BACKBONE_CB_FOLDER $MIN_FASTA $BACKBONE_CB_FOLDER $FILE
+    # CB dummy
+    python place_cb_dummy.py --startpdb $FILE --targetpdb $CB_DUMMY_PATH
+    fold_and_score $CB_DUMMY_FOLDER $MIN_FASTA $CB_DUMMY_FOLDER $FILE
+    # CB heuristic
+    python place_cb_heuristic.py --startpdb $FILE --targetpdb $CB_HEURISTIC_PATH
+    clean_pdb $CB_HEURISTIC_PATH
+    fold_and_score $CB_HEURISTIC_FOLDER $MIN_FASTA $CB_HEURISTIC_FOLDER $FILE
 done
 # may need to adapt generate_topology.tcl to correct folder as well!
-#vmd -dispdev text -e generate_topology.tcl
-#for FILE in CASP14/*.pdb;
-#do
-#    FILENAME=$(basename $FILE .pdb)  
-#    PARENT_DIR="$(dirname "$FILE")"
-#    PSF_FOLDER=${FILE:0:6}_BB_PSF/$FILENAME
-#    PSF_PATH=${PSF_FOLDER}/1psf.pdb
-#    PSF_AF_FOLDER=${FILE:0:6}_PSF_AF/$FILENAME
-#    mkdir -p ${PSF_FOLDER}
-#    mkdir -p ${PSF_AF_FOLDER}
-#    pdbfixer $PSF_PATH --output=$PSF_PATH --replace-nonstandard --add-residues
-#    # PSF
-#    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $PSF_PATH --output $PSF_FOLDER/ost_scores.json --lddt --local-lddt --tm-score --rigid-scores
-#    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $PSF_PATH --outputpath $PSF_FOLDER/attn_scores.json
-#    # PSF AF
-#    colabfold_batch --overwrite-existing-results --random-seed 6217 --num-seeds $SEEDS --num-models $MODELS --templates --custom-template-path $PSF_FOLDER --save-recycles --save-all --overwrite-existing-results --num-recycle 10 --msa-mode single_sequence --num-relax 0 $PARENT_DIR/$FILENAME.fasta $PSF_AF_FOLDER
-#    # iteration 10
-#    BEST10=$(find $PSF_AF_FOLDER -name $BESTNAME10|tail -1)
-#    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST10 --output $PSF_AF_FOLDER/ost_scores10.json --lddt --local-lddt --tm-score --rigid-scores
-#    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST10 --outputpath $PSF_AF_FOLDER/attn_scores10.json
-#    # iteration 1
-#    BEST0=$(find $PSF_AF_FOLDER -name $BESTNAME0|tail -1)
-#    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST0 --output $PSF_AF_FOLDER/ost_scores0.json --lddt --local-lddt --tm-score --rigid-scores
-#    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST0 --outputpath $PSF_AF_FOLDER/attn_scores0.json
-#    # iteration 0
-#    BEST1=$(find $PSF_AF_FOLDER -name $BESTNAME1|tail -1)
-#    podman run --rm -v $(pwd):/home openstructure:latest compare-structures --model $FILE --reference $BEST1 --output $PSF_AF_FOLDER/ost_scores1.json --lddt --local-lddt --tm-score --rigid-scores
-#    micromamba run -n attnpacker python score_attnpacker.py --predictedpdb $FILE --targetpdb $BEST1 --outputpath $PSF_AF_FOLDER/attn_scores1.json
-#done
+vmd -dispdev text -e generate_topology.tcl
+for FILE in CASP13/*.pdb; do
+    FILENAME=$(basename $FILE .pdb)
+    PARENT_DIR="$(dirname "$FILE")"
+    echo $FILENAME
+    PREFIX=${FILE:0:6}
+    PSF_FOLDER=${PREFIX}_BB_PSF/$FILENAME
+    PSF_PATH=${PSF_FOLDER}/1psf.pdb
+    PSF_AF_FOLDER=${PREFIX}_PSF_AF/$FILENAME
+    del_dir_and_mk ${PSF_AF_FOLDER}
+    clean_pdb $PSF_PATH
+    # PSF
+    score $FILE $PSF_PATH $PSF_FOLDER
+    # PSF AF
+    fold_and_score $PSF_FOLDER $MIN_FASTA $PSF_AF_FOLDER $FILE
+done

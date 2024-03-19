@@ -13,8 +13,6 @@ default_angles = {"1": [60, 14, 42], "2": [83, -100, 17], "3": [66, -14, 132]}
 def select_residues(atoms, start=None, end=None):
     start = 0 if start is None else start
     end = max(atoms.getResnums()) if end is None else end
-    print(start)
-    print(end)
     before = (
         atoms.select(f"resnum < {start}").toAtomGroup()
         if not atoms.select(f"resnum < {start}") is None
@@ -36,11 +34,9 @@ def select_residues(atoms, start=None, end=None):
 def put_together(parts):
     atoms = []
     for part in parts:
-        print("no")
         if not part is None:
-            print("hey")
-            print(part.getCoords().shape)
-            atoms.append(part.getCoords())
+            coords = part if isinstance(part, np.ndarray) else part.getCoords()
+            atoms.append(coords)
     return np.vstack(atoms)
 
 
@@ -64,7 +60,25 @@ def flatten_pdb(
     flattened_atoms = put_together((before, flattened_middle, after))
     atoms.setCoords(flattened_atoms)
     os.makedirs(Path(output_file).parent, exist_ok=True)
-    writePDB(output_file, atoms)
+    writePDB(output_file, atoms, renumber=False)
+
+
+def noise_gaussian_atoms(atoms, std=1):
+    noise = np.random.normal(scale=std, size=atoms.getCoords().shape)
+    result = atoms.getCoords() + noise
+    return result
+
+
+def noise_gaussian_pdb(
+    input_file: str, output_file: str, std: float = 1, start=None, end=None
+):
+    atoms = parsePDB(input_file)
+    before, middle, after = select_residues(atoms, start, end)
+    noised_middle = noise_gaussian_atoms(middle, std=std)
+    noised_atoms = put_together((before, noised_middle, after))
+    atoms.setCoords(noised_atoms)
+    os.makedirs(Path(output_file).parent, exist_ok=True)
+    writePDB(output_file, atoms, renumber=False)
 
 
 def randomize_atoms(atoms, radius=20):
@@ -80,10 +94,9 @@ def randomize_pdb(input_file: str, output_file: str, radius=20, start=None, end=
     before, middle, after = select_residues(atoms, start, end)
     randomized_middle = randomize_atoms(middle, radius=radius)
     randomized_atoms = put_together((before, randomized_middle, after))
-    print(randomized_atoms.shape)
     atoms.setCoords(randomized_atoms)
     os.makedirs(Path(output_file).parent, exist_ok=True)
-    writePDB(output_file, atoms)
+    writePDB(output_file, atoms, renumber=False)
 
 
 def rotate_atoms(atoms, angles=[0, 0, 0]):
@@ -98,14 +111,89 @@ def rotate_pdb(input_file: str, output_file: str, angles=[90, 60, -180]):
     atoms = parsePDB(input_file)
     rotated_atoms = rotate_atoms(atoms, angles)
     os.makedirs(Path(output_file).parent, exist_ok=True)
-    writePDB(output_file, rotated_atoms)
+    writePDB(output_file, rotated_atoms, renumber=False)
 
 
 def select_backbone(input_file: str, output_file: str):
     atoms = parsePDB(input_file)
     atoms = atoms.select("backbone")
     os.makedirs(Path(output_file).parent, exist_ok=True)
-    writePDB(output_file, atoms)
+    writePDB(output_file, atoms, renumber=False)
+
+
+def place_c_beta(c, n, ca, length=1.522, angle=1.927, dihedral=-2.143):
+    """
+    Function used to add C-Beta to glycine residues
+    input: 3 coords (c,n,ca), (L)ength, (A)ngle, and (D)ihedral
+    output: C-Beta coords
+    https://github.com/jproney/AF2Rank/blob/master/test_templates.py#L164C5-L164C5
+    """
+    N = lambda x: x / np.sqrt(np.square(x).sum(-1, keepdims=True) + 1e-8)
+    nca = N(n - ca)
+    n = N(np.cross(n - c, nca))
+    m = [nca, np.cross(n, nca), n]
+    d = [
+        length * np.cos(angle),
+        length * np.sin(angle) * np.cos(dihedral),
+        -length * np.sin(angle) * np.sin(dihedral),
+    ]
+    return ca + sum([m * d for m, d in zip(m, d)])
+
+
+def format_c_beta(ca_atom, placed_c_beta_coordinates: np.array):
+    atom_identifier = int(ca_atom.getResindices()[0]) + 1
+    resnum = ca_atom.getResnums()[0]
+    return f"ATOM    {str(atom_identifier):>3}  CB  {ca_atom.getResnames()[0]} {ca_atom.getChids()[0]} {str(resnum):>3}    {placed_c_beta_coordinates[0]:>8.3f}{placed_c_beta_coordinates[1]:>8.3f}{placed_c_beta_coordinates[2]:>8.3f}  1.00 54.89           C  "
+
+
+def generate_c_beta(atoms, resnum, length=1.522, angle=1.927, dihedral=-2.143):
+    c = atoms.select(f"resnum {resnum} name C")
+    n = atoms.select(f"resnum {resnum} name N")
+    ca = atoms.select(f"resnum {resnum} name CA")
+    placed_c_beta_coordinates = place_c_beta(
+        c.getCoords()[0],
+        n.getCoords()[0],
+        ca.getCoords()[0],
+        length=length,
+        angle=angle,
+        dihedral=dihedral,
+    )
+    return format_c_beta(c, placed_c_beta_coordinates)
+
+
+def select_bb_c_beta(
+    input_file: str,
+    output_file: str,
+    replacement_seq=None,
+    only_backbone=False,
+    beta_mode=None,
+):
+    atoms = parsePDB(input_file)
+    output = []
+    if replacement_seq and len(replacement_seq) == len(set(atoms.getResnums())):
+        for iterator, res_num in enumerate(set(atoms.getResnums())):
+            curr_residue = atoms.select(f"resnum {res_num}")
+            curr_residue.setResnames(replacement_seq[iterator])
+    elif replacement_seq:
+        print("===== Replacement seq and current protein have different length.")
+    if only_backbone:
+        atoms = atoms.select("backbone")
+        for resnum in set(atoms.getResnums()):
+            if not (atoms.select(f"resnum {resnum}").getResnames()[0] == "GLY"):
+                output.append(generate_c_beta(atoms, resnum))
+    else:
+        atoms = atoms.select("backbone or name CB")
+    if beta_mode and beta_mode == "generate":
+        glycine_resnums = set(atoms.select(f"resname GLY").getResnums())
+        for glycine_resnum in glycine_resnums:
+            if atoms.select(f"resnum {glycine_resnum} and name CB") is None:
+                output.append(generate_c_beta(atoms, glycine_resnum))
+    elif beta_mode and beta_mode == "dummy":
+        atoms.select("name CB").setCoords([0.001, 0.000, 0.000])
+    writePDB(output_file, atoms, renumber=False)
+    with open(output_file, "a") as file:
+        for line in output:
+            file.write(line + "\n")
 
 
 def average_files(input_file1: str, input_file2: str, output_file: str):
@@ -118,4 +206,4 @@ def average_files(input_file1: str, input_file2: str, output_file: str):
     avg = (coords1 + coords2) / 2
     atoms1.setCoords(avg)
     os.makedirs(Path(output_file).parent, exist_ok=True)
-    writePDB(output_file, atoms1)
+    writePDB(output_file, atoms1, renumber=False)

@@ -7,7 +7,7 @@ from typing import Optional
 import pandas as pd
 
 
-def read_ost_scores(path: Path) -> dict:
+def read_ost_scores(path: Path, local_lddt: bool = False) -> dict:
     with open(path, "r") as json_file:
         read_json = json.load(json_file)
     if read_json["status"] == "FAILURE":
@@ -20,6 +20,9 @@ def read_ost_scores(path: Path) -> dict:
     if "dockq_scores" in read_json and len(read_json["dockq_scores"]):
         output["dockq_scores"] = read_json["dockq_scores"][0]
         output["irmsd"] = read_json["irmsd"][0]
+    if local_lddt:
+        local_lddt = read_json.get("local_lddt", None).values()
+        output["local_lddt"] = pd.Series(local_lddt, name="local_lddt")
     return output
 
 

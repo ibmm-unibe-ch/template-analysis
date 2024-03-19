@@ -1,7 +1,7 @@
 package require autopsf
 
 # Define the main directory
-set mainDir "./CASP14_BB"
+set mainDir "./CASP13_BB"
 
 # Create the output directory for psfgen files
 set psfgenDir "${mainDir}_PSF"

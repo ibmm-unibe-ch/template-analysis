@@ -1,15 +1,15 @@
-hide everything, AF
+hide everything, 2ubq
 
 #
-select first, /AF///1-100;
-select end, /AF///100-153;
+select first, /2ubq///1-100;
+select end, /2ubq///100-153;
 
 show cartoon, first_;
-set_color blue, [0.345, 0.419, 0.643];
+set_color blue, [0.2901960784313726, 0.3137254901960784, 0.592156862745098];
 color blue, first_;
 
 show cartoon, end;
-set_color orange, [0.964, 0.556, 0.372];
+set_color orange, [0.9529411764705882, 0.5411764705882353, 0.3686274509803922];
 color orange, end;
 
 set line_width, 3; # set line width
