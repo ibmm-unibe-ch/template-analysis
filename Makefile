@@ -16,8 +16,7 @@ build-conda-from-env:
 
 install-attnpacker:
 	micromamba activate attnpacker
-	# change to own fork 
-	git clone https://github.com/MattMcPartlon/AttnPacker.git
+	git clone https://github.com/rostro36/AttnPacker.git
 	pip install -r AttnPacker/requirements.txt
 
 install-environment:
