@@ -25,7 +25,7 @@ Protein structure prediction, a fundamental challenge in computational biology, 
 1. get SASA analysis by running `SASA_analysis.ipynb`
 ### Reproduce synthetic backbone refinement
 1. perform installation
-1. `bash bash-synthetic-backbones.sh` &rightarrow; you have to adjust for CASP13 or CASP14
+1. `bash bash-synthetic-backbones.sh` &rightarrow; you have to adjust for CASP13 or CASP14 and give your own `MAXIT_PATH`
 1. get results by running `Backbone_results.ipynb`
 
 ## Contact
