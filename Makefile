@@ -12,7 +12,7 @@ build-conda-from-req: ## Build the conda environment
 	python -s -m pip install -r requirements.txt
 
 build-conda-from-env:
-	micromamba env create -n $(CONDA_ENV_NAME) -f environment.yml
+	micromamba env create -n $(CONDA_ENV_NAME) -f T_A.yml
 
 install-attnpacker:
 	micromamba activate attnpacker
