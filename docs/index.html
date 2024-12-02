@@ -78,7 +78,7 @@
         
         h1, h3 {
             color: #F28C28;
-            max-width: 60%;
+            max-width: 40%;
             text-overflow: clip;
             white-space: initial;
             margin-left: auto;
@@ -92,7 +92,7 @@
         }
         p, ul, pre {
             line-height: 1.6;
-            max-width: 60%;
+            max-width: 40%;
             text-overflow: clip;
             margin-left: auto;
             margin-right: auto;
@@ -145,32 +145,32 @@
                 <h1><a href="https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbae187/7908398"> Behind the paper: Dissecting AlphaFolds Capabilities with Limited Sequence Information</a></h1>
             </div>
             <h3><strong>📖¿Dónde está la AlphaFold?📖</strong></h3>
-            <p>Half of the 2024 Nobel Prize in Chemistry was awarded to John Jumper and Demis Hassabis for their contributions to the AlphaFold project that produced powerful deep learning protein folding models [1,2,3]. Their models enable accurate protein structure predictions that have not only revolutionized computational biology, but their resounding success has also attracted the attention of classical biologists, who are now interacting more with computational methods.
-<br>
-AlphaFold is not just a machine learning model, it is a whole pipeline (displayed in the following image). First, the given protein sequence gets queried in huge sequence databases and template databases. These searches result in a multiple sequence alignment (MSA) and templates respectively. It is understood that AlphaFold 2 relies much more heavily on the multiple sequence alignment input. The template input is often neglected either by the user or by the model itself when there is a strong multiple sequence alignment.
+            <p>Half of the 2024 Nobel Prize in Chemistry was awarded to John Jumper and Demis Hassabis for their contributions to the AlphaFold project that produced powerful deep learning protein folding models [1,2,3]. Their models enable accurate protein structure predictions that have not only revolutionized computational biology, but their resounding success has also attracted the attention of classical biologists, who are now interacting more with computational methods.</p>
+                <div class="center">
+                    <img src="img/AlphaFold_overview.png" alt="AlphaFold 2 Overview" width="60%">
+                    <p class="caption">Simplified overview of AlphaFold 2 [2] with the search, MSA, template and structure parts.</p>
+                    </div>
+<p> is not just a machine learning model, it is a whole pipeline (displayed in the following image). First, the given protein sequence gets queried in huge sequence databases and template databases. These searches result in a multiple sequence alignment (MSA) and templates respectively. It is understood that AlphaFold 2 relies much more heavily on the multiple sequence alignment input. The template input is often neglected either by the user or by the model itself when there is a strong multiple sequence alignment.
 We wanted to find out what is the effect of templates and if we can use them for other tasks. To direct the focus on templates, we ran experiments with minimal multiple sequence alignment information, i.e. only the query sequence), and curated templates.
 </p>
-<div class="center">
-<img src="img/AlphaFold_overview.png" alt="AlphaFold 2 Overview" width="60%">
-<p class="caption">Simplified overview of AlphaFold 2 [2] with the search, MSA, template and structure parts.</p>
-</div>
  <h3 id="tasks"><strong>Why these synthetic tasks?</strong></h3>
-            <p>We started two types of experiments to determine the capabilities of AlphaFold 2 relying on templates. <b>The first type of experiment is side-chain packing</b>; side-chain packing is the task of placing (packing) side-chains given only the protein backbone. Side-chains are the difference makers between residue types, while the backbone is the same for each residue type. Side-chain packing is important in pipelines based on residue type invariant algorithms such as ProteinMPNN [4] or to complete experimental structures, where only the more easily detectable backbone has been identified with a low error. <b>This task is considered a local one</b>, since only the close neighbourhood of the side-chain plays a role in its placement.
-<b>The second type of experiment is structure recovery.</b> We wanted to find out how AlphaFold 2 reacts to a perturbed structure and if the model can be used to recover the unperturbed structure. As far as we know, this task is less well studied in the literature and we had to invent our own synthetic perturbations. We chose to focus on synthetic perturbations because they are easier to generate and, more importantly, provide us with greater control over the structure. In contrast, using experimental templates can introduce unwanted variability in the results due to differences in template quality. By relying on synthetic perturbations, we ensure consistency across the dataset, maintaining a uniform level of difficulty for each problem. This allows us to fine-tune the challenge presented to AlphaFold while avoiding the unpredictable effects of varying template quality. Ultimately, this approach provides a more controlled and reliable testing environment. The chosen perturbations involved applying independent and identically distributed Gaussian noise to each atom, keeping only one or two principal components, or using RFdiffusion [5] for a few iterations. <b>This task is considered more global</b>, since it requires considering the  protein as a whole.
+            <p>We started two types of experiments to determine the capabilities of AlphaFold 2 relying on templates. <b>The first type of experiment is side-chain packing</b>; side-chain packing is the task of placing (packing) side-chains given only the protein backbone. Side-chains are the difference makers between residue types, while the backbone is the same for each residue type. Side-chain packing is important in pipelines based on residue type invariant algorithms such as ProteinMPNN [4] or to complete experimental structures, where only the more easily detectable backbone has been identified with a low error. <b>This task is considered a local one</b>, since only the close neighbourhood of the side-chain plays a role in its placement.</p>
+                <div class="center">
+                    <img src="img/different_perturbations.png" alt="Different perturbations" width="60%">
+                    <p class="caption">Ground truth and some perturbed versions of the same structure.</p>
+                    </div>
+                <p><b>The second type of experiment is structure recovery.</b> We wanted to find out how AlphaFold 2 reacts to a perturbed structure and if the model can be used to recover the unperturbed structure. As far as we know, this task is less well studied in the literature and we had to invent our own synthetic perturbations. We chose to focus on synthetic perturbations because they are easier to generate and, more importantly, provide us with greater control over the structure. In contrast, using experimental templates can introduce unwanted variability in the results due to differences in template quality. By relying on synthetic perturbations, we ensure consistency across the dataset, maintaining a uniform level of difficulty for each problem. This allows us to fine-tune the challenge presented to AlphaFold while avoiding the unpredictable effects of varying template quality. Ultimately, this approach provides a more controlled and reliable testing environment. The chosen perturbations involved applying independent and identically distributed Gaussian noise to each atom, keeping only one or two principal components, or using RFdiffusion [5] for a few iterations. <b>This task is considered more global</b>, since it requires considering the  protein as a whole.
 </p>
-<div class="center">
-<img src="img/different_perturbations.png" alt="Different perturbations" width="60%">
-<p class="caption">Ground truth and some perturbed versions of the same structure.</p>
-</div>
             <h3 id="tasks"><strong>How much structure does AlphaFold know?</strong></h3>
-            <p>Before addressing the tasks, we first note that AlphaFold 2 correctly identifies the template when given the correct template and minimal multiple sequence alignment. For the initial local task of side-chain packing, AlphaFold 2 heavily relies on the C-Beta position: <b>Without a good C-Beta</b>, the side-chain packing performance is abysmal. However, <b>when a reasonable C-Beta is provided</b>, AlphaFold performs well, comparable to the much faster FASPR [6], though not as well as specialized machine learning models like AttnPacker [7]. Fortunately, <b>a reasonable C-Beta can be placed with a simple heuristic</b> [8]. Interestingly, AttnPacker’s packed structures perform slightly better than AlphaFold 2’s predictions, even when the full, correct template was provided.<br>
+            <p>Before addressing the tasks, we first note that AlphaFold 2 correctly identifies the template when given the correct template and minimal multiple sequence alignment. For the initial local task of side-chain packing, AlphaFold 2 heavily relies on the C-Beta position: <b>Without a good C-Beta</b>, the side-chain packing performance is abysmal. However, <b>when a reasonable C-Beta is provided</b>, AlphaFold performs well, comparable to the much faster FASPR [6], though not as well as specialized machine learning models like AttnPacker [7]. Fortunately, <b>a reasonable C-Beta can be placed with a simple heuristic</b> [8]. Interestingly, AttnPacker’s packed structures perform slightly better than AlphaFold 2’s predictions, even when the full, correct template was provided.</p>
+                <div class="center">
+                    <img src="img/flat_to_af.gif" alt="flat_to_af" width="40%">
+                    <p class="caption">Morphing gif of structure perturbed by only taking two principal components to the prediction by AlphaFold using this as template. Thanks to Symela Laziridi</p>
+                    </div>
+                    <p>
 For the second task of structure recovery, AlphaFold 2 performs well in recovering structures from Gaussian noise with a standard deviation of 1Å and slightly improves RFdiffusion templates for larger structural perturbations. The most surprising results come from the principal component experiments: <b>AlphaFold 2 recovers already respectably from only one principal component, and recovers the structure quite well from two principal components</b>. The results from two principal components are very similar to the predictions from the full multiple sequence alignment and no template. The transition from two principal components to the AlphaFold prediction can be seen in the GIF.
 <br>
 With a custom build of the open source replication of AlphaFold 2, OpenFold [9], we found out that <b>structure recycling has a negligible effect on the prediction</b>; the benefit of recycling comes from recycling the multiple sequence alignment representation. Attempts to override this previous prediction parameter with a multimer template were unfortunately also unsuccessful.</p>
-<div class="center">
-<img src="img/flat_to_af.gif" alt="flat_to_af" width="30%">
-<p class="caption">Morphing gif of structure perturbed by only taking two principal components to the prediction by AlphaFold using this as template. Thanks to Symela Laziridi</p>
-</div>
             <h3 id="references"><strong>¿Qué significan nuestros resultados?</strong></h3>
             <p>On the theoretical side, these results allow for more precise reasoning about the strengths and weaknesses of AlphaFold 2. Collectively, these results support the hypothesis that AlphaFold2 has learned an accurate biophysical energy function. However, this function seems most effective for local interactions. This reasoning should lead to better development of tools and pipelines around AlphaFold 2. On the practical side, based on these results, <b>we are now using this pipeline to fill in missing residues from experimental structures and to standardise structures</b>. We have also conducted successful experiments to refine back-mapped coarse-grained models into atomistic models for molecular dynamics simulations.[10]</p>
             <h3 id="references"><strong>References</strong></h3>
