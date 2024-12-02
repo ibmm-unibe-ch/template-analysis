@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Behind the paper: Dissecting AlphaFolds Capabilities with Limited Sequence Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            flex-direction: row;
+            min-height: 100vh;
+            white-space: initial;
+        }
+        .container {
+            display: flex;
+            flex: 1;
+        }
+        <!--
+        .sidebar {
+            width: 200px;
+            background-color: #333; /* Background color darker */
+            color: #fff; /* Text color white */
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 2px solid #444;
+            position: fixed; /* Fixed sidebar */
+            top: 0;
+            left: 0;
+        }
+        .sidebar h2 {
+            font-size: 1.4em;
+            color: #F28C28;
+            border-bottom: 2px solid #F28C28;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+        .sidebar ul li a {
+            color: #ddd; /* Link color lighter */
+            text-decoration: none;
+            font-size: 1.1em;
+            display: block;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .sidebar ul li a:hover {
+            background-color: #444; /* Darker background on hover */
+            text-decoration: underline;
+        }
+        .sidebar ul li a.active {
+            font-weight: bold;
+            color: #F28C28; /* Active link color */
+            background-color: #555; /* Background color for active link */
+        } 
+        -->
+        .content {
+            /* margin-left: 250px;  Adjust margin to match sidebar width */
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto; /* Allow vertical scrolling */
+            flex: 1;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        h1, h3 {
+            color: #F28C28;
+            max-width: 60%;
+            text-overflow: clip;
+            white-space: initial;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        p, ul, pre {
+            line-height: 1.6;
+            max-width: 60%;
+            text-overflow: clip;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .code-block {
+            background-color: #f9f9f9;
+            border-left: 3px solid #D35400;
+            padding: 10px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .caption {
+            text-align: center;
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 5px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px 0;
+            border-top: 1px solid #ddd;
+            font-size: 0.9em;
+            color: #777;
+        }
+        strong {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="center">
+                <img title="logo" alt="Graphical abstract" src="img/template_analysis_graphical_abstract.png" width="600" height="300">
+                <br/><br/>
+                <a href="https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbae187/7908398">
+                    <img src="http://img.shields.io/badge/DOI-10.1093/bioadv/vbae183-F28C28.svg" alt="DOI:10.1093/bioadv/vbae187">
+                </a>
+            </div>
+
+            <div class="center">
+                <h1><a href="https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbae187/7908398"> Behind the paper: Dissecting AlphaFolds Capabilities with Limited Sequence Information</a></h1>
+            </div>
+            <h3><strong>📖¿Dónde está la AlphaFold?📖</strong></h3>
+            <p>Half of the 2024 Nobel Prize in Chemistry was awarded to John Jumper and Demis Hassabis for their contributions to the AlphaFold project that produced powerful deep learning protein folding models [1,2,3]. Their models enable accurate protein structure predictions that have not only revolutionized computational biology, but their resounding success has also attracted the attention of classical biologists, who are now interacting more with computational methods.
+<br>
+AlphaFold is not just a machine learning model, it is a whole pipeline (displayed in the following image). First, the given protein sequence gets queried in huge sequence databases and template databases. These searches result in a multiple sequence alignment (MSA) and templates respectively. It is understood that AlphaFold 2 relies much more heavily on the multiple sequence alignment input. The template input is often neglected either by the user or by the model itself when there is a strong multiple sequence alignment.
+We wanted to find out what is the effect of templates and if we can use them for other tasks. To direct the focus on templates, we ran experiments with minimal multiple sequence alignment information, i.e. only the query sequence), and curated templates.
+</p>
+<div class="center">
+<img src="img/AlphaFold_overview.png" alt="AlphaFold 2 Overview" width="30%">
+<p class="caption">Simplified overview of AlphaFold 2 [2] with the search, MSA, template and structure parts.</p>
+</div>
+ <h3 id="tasks"><strong>Why these synthetic tasks?</strong></h3>
+            <p>We started two types of experiments to determine the capabilities of AlphaFold 2 relying on templates. <b>The first type of experiment is side-chain packing</b>; side-chain packing is the task of placing (packing) side-chains given only the protein backbone. Side-chains are the difference makers between residue types, while the backbone is the same for each residue type. Side-chain packing is important in pipelines based on residue type invariant algorithms such as ProteinMPNN [4] or to complete experimental structures, where only the more easily detectable backbone has been identified with a low error. <b>This task is considered a local one</b>, since only the close neighbourhood of the side-chain plays a role in its placement.
+<b>The second type of experiment is structure recovery.</b> We wanted to find out how AlphaFold 2 reacts to a perturbed structure and if the model can be used to recover the unperturbed structure. As far as we know, this task is less well studied in the literature and we had to invent our own synthetic perturbations. We chose to focus on synthetic perturbations because they are easier to generate and, more importantly, provide us with greater control over the structure. In contrast, using experimental templates can introduce unwanted variability in the results due to differences in template quality. By relying on synthetic perturbations, we ensure consistency across the dataset, maintaining a uniform level of difficulty for each problem. This allows us to fine-tune the challenge presented to AlphaFold while avoiding the unpredictable effects of varying template quality. Ultimately, this approach provides a more controlled and reliable testing environment. The chosen perturbations involved applying independent and identically distributed Gaussian noise to each atom, keeping only one or two principal components, or using RFdiffusion [5] for a few iterations. <b>This task is considered more global</b>, since it requires considering the  protein as a whole.
+</p>
+<div class="center">
+<img src="img/different_perturbations.png" alt="Different perturbations" width="30%">
+<p class="caption">Ground truth and some perturbed versions of the same structure.</p>
+</div>
+            <h3 id="tasks"><strong>How much structure does AlphaFold know?</strong></h3>
+            <p>Before addressing the tasks, we first note that AlphaFold 2 correctly identifies the template when given the correct template and minimal multiple sequence alignment. For the initial local task of side-chain packing, AlphaFold 2 heavily relies on the C-Beta position: <b>Without a good C-Beta</b>, the side-chain packing performance is abysmal. However, <b>when a reasonable C-Beta is provided</b>, AlphaFold performs well, comparable to the much faster FASPR [6], though not as well as specialized machine learning models like AttnPacker [7]. Fortunately, <b>a reasonable C-Beta can be placed with a simple heuristic</b> [8]. Interestingly, AttnPacker’s packed structures perform slightly better than AlphaFold 2’s predictions, even when the full, correct template was provided.<br>
+For the second task of structure recovery, AlphaFold 2 performs well in recovering structures from Gaussian noise with a standard deviation of 1Å and slightly improves RFdiffusion templates for larger structural perturbations. The most surprising results come from the principal component experiments: <b>AlphaFold 2 recovers already respectably from only one principal component, and recovers the structure quite well from two principal components</b>. The results from two principal components are very similar to the predictions from the full multiple sequence alignment and no template. The transition from two principal components to the AlphaFold prediction can be seen in the GIF.
+<br>
+With a custom build of the open source replication of AlphaFold 2, OpenFold [9], we found out that <b>structure recycling has a negligible effect on the prediction</b>; the benefit of recycling comes from recycling the multiple sequence alignment representation. Attempts to override this previous prediction parameter with a multimer template were unfortunately also unsuccessful.</p>
+<div class="center">
+<img src="img/flat_to_af.gif" alt="flat_to_af" width="30%">
+<p class="caption">Morphing gif of structure perturbed by only taking two principal components to the prediction by AlphaFold using this as template. Thanks to Symela Laziridi</p>
+</div>
+            <h3 id="references"><strong>¿Qué significan nuestros resultados?</strong></h3>
+            <p>On the theoretical side, these results allow for more precise reasoning about the strengths and weaknesses of AlphaFold 2. Collectively, these results support the hypothesis that AlphaFold2 has learned an accurate biophysical energy function. However, this function seems most effective for local interactions. This reasoning should lead to better development of tools and pipelines around AlphaFold 2. On the practical side, based on these results, <b>we are now using this pipeline to fill in missing residues from experimental structures and to standardise structures</b>. We have also conducted successful experiments to refine back-mapped coarse-grained models into atomistic models for molecular dynamics simulations.[10]</p>
+            <h3 id="references"><strong>References</strong></h3>
+            <p>[1] Senior, Andrew W., et al. "Improved protein structure prediction using potentials from deep learning." Nature 577.7792 (2020): 706-710.<br>
+[2] Jumper, John, et al. "Highly accurate protein structure prediction with AlphaFold." nature 596.7873 (2021): 583-589.<br>
+[3] Abramson, Josh, et al. "Accurate structure prediction of biomolecular interactions with AlphaFold 3." Nature (2024): 1-3.<br>
+[4] Dauparas, Justas, et al. "Robust deep learning–based protein sequence design using ProteinMPNN." Science 378.6615 (2022): 49-56.<br>
+[5] Watson, Joseph L., et al. "De novo design of protein structure and function with RFdiffusion." Nature 620.7976 (2023): 1089-1100.<br>
+[6] Huang, Xiaoqiang, Robin Pearce, and Yang Zhang. "FASPR: an open-source tool for fast and accurate protein side-chain packing." Bioinformatics 36.12 (2020): 3758-3765.
+[7] McPartlon, Matthew, and Jinbo Xu. "An end-to-end deep learning method for protein side-chain packing and inverse folding." Proceedings of the National Academy of Sciences 120.23 (2023): e2216438120.<br>
+[8] Roney, James P., and Sergey Ovchinnikov. "State-of-the-art estimation of protein model accuracy using AlphaFold." Physical Review Letters 129.23 (2022): 238101.<br>
+[9] Ahdritz, Gustaf, et al. "OpenFold: Retraining AlphaFold2 yields new insights into its learning mechanisms and capacity for generalization." Nature Methods (2024): 1-11.<br>
+[10] Wassenaar, Tsjerk. “Martini Tutorials - Reverse Coarse-Graining with Backward”. (2024), https://cgmartini.nl/docs/tutorials/Martini3/Backward/.
+</p>
+            
+            <h3 id="contact"><strong>Contact</strong></h3>
+            <p>Clone the code or ask a question on <a href="https://github.com/ibmm-unibe-ch/template-analysis">GitHub</a>. Otherwise, you can contact me via email: jannik.gut@unibe.ch.</p>
+        </div>
+    </div>
+</body>
+</html>
